@@ -21,6 +21,8 @@ module cnn_top_tb;
 	wire [23:0] oOut8;
 	wire oValid;
 
+	reg [31:0] oValid_count;
+
     cnn_top cnn_top(
 		.iClk(iClk),
 		.iRst(iRst),
@@ -44,15 +46,52 @@ module cnn_top_tb;
         forever #5 iClk = ~iClk; // 10ns period
     end
 
+    reg [3:0] rCnt;
+	wire iEn;
     
+    always @(posedge iClk, negedge iRst) begin
+        if(!iRst) begin
+            rCnt <= 0;
+        end
+        else if (rCnt == 4'hF) begin
+            rCnt <= 4'b0;
+        end else begin
+            rCnt <= rCnt + 1'b1;
+        end
+    end
+	assign iEn = (rCnt == 4'hF)  ? 1'b1 : 1'b0;
+
+	always @(posedge oValid, negedge iRst) begin
+        if (!iRst) begin
+            // 리셋 시 카운터 초기화
+            oValid_count <= 0;
+        end
+        else if (oValid) begin 
+            oValid_count <= oValid_count + 1;
+        end
+    end
+
     initial begin
 		// reset
         iRst = 1'b0;
+		iBusy = 1'b0;
         repeat(10) @(posedge iClk);
         iRst = 1'b1;
 		
-		repeat(10) @(posedge iClk);
+		/*
+		repeat(100) @(posedge iEn);
+		iBusy = 1'b1;
+		repeat(100) @(posedge iEn);
 		iBusy = 1'b0;
+		repeat(100) @(posedge iEn);
+		iBusy = 1'b1;
+		repeat(100) @(posedge iEn);
+		iBusy = 1'b0;
+		repeat(150) @(posedge iEn);
+		iBusy = 1'b1;
+		repeat(150) @(posedge iEn);
+		iBusy = 1'b0;
+		*/
     end
 	
 endmodule

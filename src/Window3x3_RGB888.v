@@ -60,7 +60,7 @@ always @(posedge iClk or negedge iRst) begin
 		rGetCnt <= 4'b0;	
 		rPixel_cnt <= {ADDR_W{1'b0}};
 	end
-	else if(iEn) begin
+	else if(iEn == 1'b1 && iBusy == 0) begin
 		if((wGetMax == rGetCnt) || ((cur_state != nxt_state)) ) begin
 			rGetCnt <= 4'b0;
 		end
@@ -82,6 +82,7 @@ end
 wire wIsLeft = (rPixel_cnt[4:0] == 5'b0) ? 1'b1 : 1'b0;
 wire wIsRight = (rPixel_cnt[4:0] == 5'b11111) ? 1'b1 : 1'b0;
 */
+wire wIsRight = (rPixel_cnt[4:0] == 5'b11111) ? 1'b1 : 1'b0;
 
 reg [3:0] cur_state;
 reg [3:0] nxt_state;
@@ -90,7 +91,7 @@ always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
 		cur_state <= IDLE;
 	end
-	else if(iEn)begin
+	else if(iEn == 1'b1 && iBusy == 1'b0)begin
 		cur_state <= nxt_state;
 	end
 	else begin
@@ -102,44 +103,44 @@ end
 always @(*) begin
 	case (cur_state)
 		IDLE: begin
-			if(iEn == 1'b1) nxt_state <= P0; else nxt_state <= IDLE;
+			if(iEn == 1'b1) nxt_state = P0; else nxt_state = IDLE;
 		end 
 		P0: begin
-			if((rGetCnt == wGetMax)) nxt_state <= P1; else nxt_state <= P0;
+			if((rGetCnt == wGetMax)) nxt_state = P1; else nxt_state = P0;
 		end
 		P1: begin
-			if(rPixel_cnt == 39) nxt_state <= P2; else nxt_state <= P1;
+			if(rPixel_cnt == 39) nxt_state = P2; else nxt_state = P1;
 		end
 		P2: begin
-			if((rGetCnt == wGetMax) ) nxt_state <= P3; else nxt_state <= P2;
+			if((rGetCnt == wGetMax) ) nxt_state = P3; else nxt_state = P2;
 		end
 
 		P3: begin
-			if((rGetCnt == wGetMax) ) nxt_state <= P4; else nxt_state <= P3;
+			if((rGetCnt == wGetMax) ) nxt_state = P4; else nxt_state = P3;
 		end
 		P4: begin
-			if(rPixel_cnt == 79 || rPixel_cnt == 119) nxt_state <= P5; else nxt_state <= P4;
+			if(rPixel_cnt == 79 || rPixel_cnt == 119) nxt_state = P5; else nxt_state = P4;
 		end
 		P5: begin 
-			if(rPixel_cnt == 119 && (rGetCnt == wGetMax)) begin //130580 마지막 열 시작 480 * 271
-				nxt_state <= P6;
+			if(rPixel_cnt == 119 && ((rGetCnt == wGetMax))) begin //130580 마지막 열 시작 480 * 271
+				nxt_state = P6;
 			end 
 			else if((rGetCnt == wGetMax)) begin
-				nxt_state <= P3;
+				nxt_state = P3;
 			end  
-			else nxt_state <= P5;
+			else nxt_state = P5;
 		end
 
 		P6: begin
-			if((rGetCnt == wGetMax)) nxt_state <= P7; else nxt_state <= P6;
+			if((rGetCnt == wGetMax)) nxt_state = P7; else nxt_state = P6;
 		end
 		P7: begin
-			if((rPixel_cnt == 159) && (rGetCnt == wGetMax)) nxt_state <= P8; else nxt_state <= P7;
+			if((rPixel_cnt == 159)) nxt_state = P8; else nxt_state = P7;
 		end
 		P8: begin
-			if((rGetCnt == wGetMax)) nxt_state <= IDLE; else nxt_state <= P8;
+			if((rGetCnt == wGetMax)) nxt_state = IDLE; else nxt_state = P8;
 		end
-		default:nxt_state <= IDLE; 
+		default:nxt_state = IDLE; 
 	endcase
 end
 
@@ -150,7 +151,7 @@ always @(posedge iClk or negedge iRst) begin
 		rAddr <= {ADDR_W{1'b0}};	
 	end
 	else begin
-		if(iEn) begin
+		if(iEn == 1'b1 && iBusy == 1'b0) begin
 			case (cur_state)
 				P0: begin
 					if(rGetCnt == 0) rAddr <= rPixel_cnt;
@@ -220,7 +221,7 @@ always @(posedge iClk or negedge iRst) begin
 			rOut[i] <= {DATA_W{1'b0}};			
 		end
 	end
-	else if(iEn == 1'b1)begin
+	else if(iEn == 1'b1 && iBusy == 1'b0)begin
 		case (cur_state)
 			P3: begin
 				if(rGetCnt == 3 || rGetCnt == 4)begin
@@ -296,7 +297,7 @@ always @(posedge iClk or negedge iRst) begin
 			rOut[i] <= {DATA_W{1'b0}};			
 		end
 	end
-	else if(iEn == 1'b1)begin
+	else if(iEn == 1'b1 && iBusy == 1'b0)begin
 		case (cur_state)
 			P0: begin
 				if(rGetCnt == 3 || rGetCnt == 4)begin
@@ -400,7 +401,7 @@ always @(posedge iClk or negedge iRst) begin
 			rOut[i] <= {DATA_W{1'b0}};			
 		end
 	end
-	else if(iEn == 1'b1)begin
+	else if(iEn == 1'b1 && iBusy == 1'b0)begin
 		case (cur_state)
 			P0: begin
 				if(rGetCnt == 5 || rGetCnt == 6)begin
@@ -469,6 +470,32 @@ always @(posedge iClk or negedge iRst) begin
 		end
 	end
 end
+
+reg wValid;
+always @(*) begin
+	case (cur_state)
+		P1: begin
+			if(rGetCnt == 2) wValid = 1'b1; else wValid = 1'b0;
+		end
+		P2: begin
+			if(rGetCnt == 0 || rGetCnt == 1) wValid = 1'b1; else wValid = 1'b0;
+		end
+		P4: begin
+			if(rGetCnt == 2) wValid = 1'b1; else wValid = 1'b0;
+		end
+		P5: begin
+			if(rGetCnt == 0 || rGetCnt == 1) wValid = 1'b1; else wValid = 1'b0;
+		end
+		P7: begin
+			if(rGetCnt == 2) wValid = 1'b1; else wValid = 1'b0;
+		end
+		P8:begin
+			if(rGetCnt == 0 || rGetCnt == 1) wValid = 1'b1; else wValid = 1'b0;
+		end
+		default: wValid = 1'b0;
+	endcase
+end
+assign oValid = wValid && iEn && (!iBusy);
 
 assign oOut0 = rOut[0];
 assign oOut1 = rOut[1];
