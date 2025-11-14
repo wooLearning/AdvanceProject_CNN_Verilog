@@ -18,8 +18,8 @@ module cnn_top (
 
 localparam DATA_W = 24;
 localparam ADDR_W = 17;
-localparam WIDTH = 40;
-localparam HEIGHT = 272;
+localparam WIDTH = 480;
+localparam HEIGHT = 3;
 localparam DEPTH  = WIDTH * HEIGHT;
 
 wire wEn;

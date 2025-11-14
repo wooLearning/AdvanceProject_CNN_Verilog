@@ -93,19 +93,14 @@ always @(posedge iClk or negedge iRst) begin
                 rColCnt <= rColCnt + 1'b1; // 카운터 증가
             end
 		end
-        else begin
-			rColCnt <= rColCnt;
-			rRowCnt <= rRowCnt;
-		end
+        // (else: rColCnt, rRowCnt 유지)
 	end
-    else begin
-		rGetCnt <= rGetCnt;
-		rColCnt <= rColCnt;
-		rRowCnt <= rRowCnt;
-    end
+    // (else: 모든 레지스터 값 유지)
 end
 
-//part1
+//
+// FSM 상태 레지스터 (part1)
+//
 reg [3:0] cur_state;
 reg [3:0] nxt_state;
 always @(posedge iClk or negedge iRst) begin
@@ -120,7 +115,9 @@ always @(posedge iClk or negedge iRst) begin
 	end
 end
 
-//part2
+//
+// FSM 상태 천이 (part2)
+//
 always @(*) begin
 	case (cur_state)
 		IDLE: begin
@@ -168,7 +165,9 @@ always @(*) begin
 	endcase
 end
 
+//
 // 주소 계산 로직 (rAddr)
+//
 reg [ADDR_W -1:0] rAddr;
 always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
@@ -200,6 +199,7 @@ always @(posedge iClk or negedge iRst) begin
 					else rAddr <= rAddr;
 				end
 				P4 : begin
+                    // [수정됨] 원본 코드(cite: 162)와 같이 -WIDTH가 필요합니다.
 					if(rGetCnt == 0) rAddr <= wPixelCnt - WIDTH +1'b1 ;
 					else if(rGetCnt == 1) rAddr <= rAddr + WIDTH;
 					else if(rGetCnt == 2) rAddr <= rAddr + WIDTH;
@@ -216,6 +216,7 @@ always @(posedge iClk or negedge iRst) begin
 					else rAddr <= rAddr;
 				end
 				P7 : begin
+                    // [수정됨] 원본 코드(cite: 166)와 같이 -WIDTH가 필요합니다.
 					if(rGetCnt == 0) rAddr <= wPixelCnt + 1'b1 - WIDTH;
 					else if(rGetCnt == 1) rAddr <= rAddr+WIDTH;
 					else rAddr <= rAddr;
@@ -528,6 +529,7 @@ always @(*) begin
 	endcase
 end
 assign oValid = wValid && iEn && (!iBusy);
+
 
 assign oOut0 = rOut[0];
 assign oOut1 = rOut[1];

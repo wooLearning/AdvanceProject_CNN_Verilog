@@ -29,6 +29,7 @@ module Window3x3_RGB888#(
 	/*mac wait*/
 	input iBusy
 );
+
 localparam IDLE = 4'd9;
 localparam P0 = 4'd0;
 localparam P1 = 4'd1;
@@ -39,6 +40,7 @@ localparam P5 = 4'd5;
 localparam P6 = 4'd6;
 localparam P7 = 4'd7;
 localparam P8 = 4'd8;
+
 wire [3:0] wGetMax = (cur_state == P0) ? 4'd6 ://4+2
 					 (cur_state == P1) ? 4'd4 : //2+2
 					 (cur_state == P2) ? 4'd2 : //2+0
@@ -51,63 +53,47 @@ wire [3:0] wGetMax = (cur_state == P0) ? 4'd6 ://4+2
 
 integer i;
 reg [3:0] rGetCnt;//get counter
-// [참고] 원래 코드(cite: 137)의 [$clog2(WIDTH) - 1 : 0]이 맞습니다.
-// [$clog2(WIDTH) : 0] (10비트)도 동작은 하지만 9비트 [8:0]이면 충분합니다.
-// 여기서는 일단 올려주신 [9:0] 기준으로 둡니다.
-reg [$clog2(WIDTH) : 0] rColCnt; 
+reg [$clog2(WIDTH) : 0] rColCnt;
 reg [$clog2(HEIGHT) : 0] rRowCnt;
 wire [ADDR_W - 1:0] wPixelCnt;
 assign wPixelCnt = rColCnt + rRowCnt * WIDTH;
 
-//
-// rColCnt, rRowCnt 카운터 로직 ([!!! 479픽셀 버그 수정됨 !!!])
-//
 always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
-		rGetCnt <= 4'b0;
+		rGetCnt <= 4'b0;	
 		rColCnt <= 0;
 		rRowCnt <= 0;
 	end
 	else if(iEn == 1'b1 && iBusy == 0) begin
-        // --- rGetCnt 로직 (변경 없음) ---
 		if((wGetMax == rGetCnt) || ((cur_state != nxt_state)) ) begin
 			rGetCnt <= 4'b0;
 		end
 		else begin
 			rGetCnt <= rGetCnt + 1'b1;
 		end
-
-        // --- rColCnt / rRowCnt 로직 (수정됨) ---
-		if(rColCnt == WIDTH) begin 
-            // 우선순위 1: 줄의 끝(WIDTH)에 도달하면 리셋
+		if((wGetMax == rGetCnt)) begin //  || ((cur_state != nxt_state) && (cur_state != IDLE) && (cur_state != P1)  && (cur_state != P4) && (cur_state != P5) && (cur_state != P7))
+			rColCnt <= rColCnt + 1'b1;
+		end
+		else if(rColCnt == WIDTH) begin
 			rRowCnt <= rRowCnt + 1'b1;
 			rColCnt <= 0;
 		end
-		else if((wGetMax == rGetCnt)) begin 
-            // 우선순위 2: 픽셀 카운터(rGetCnt)가 끝나면 rColCnt 증가
-            // [버그 수정] 단, P2, P5, P8 상태에서는 rColCnt가 증가하면 안 됨.
-            if (cur_state == P2 || cur_state == P5 || cur_state == P8) begin
-                rColCnt <= rColCnt; // 카운터 유지
-            end
-            else begin
-                rColCnt <= rColCnt + 1'b1; // 카운터 증가
-            end
-		end
-        else begin
+		else begin
 			rColCnt <= rColCnt;
 			rRowCnt <= rRowCnt;
 		end
 	end
-    else begin
+	else begin
 		rGetCnt <= rGetCnt;
 		rColCnt <= rColCnt;
 		rRowCnt <= rRowCnt;
-    end
+	end
 end
 
-//part1
+
 reg [3:0] cur_state;
 reg [3:0] nxt_state;
+//part1
 always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
 		cur_state <= IDLE;
@@ -124,8 +110,7 @@ end
 always @(*) begin
 	case (cur_state)
 		IDLE: begin
-			if(iEn == 1'b1) nxt_state = P0;
-			else nxt_state = IDLE;
+			if(iEn == 1'b1) nxt_state = P0; else nxt_state = IDLE;
 		end 
 		P0: begin
 			if((rGetCnt == wGetMax)) nxt_state = P1; else nxt_state = P0;
@@ -134,8 +119,7 @@ always @(*) begin
 			if(rColCnt == WIDTH -1) nxt_state = P2; else nxt_state = P1;
 		end
 		P2: begin
-			if((rGetCnt == wGetMax) ) nxt_state = P3;
-			else nxt_state = P2;
+			if((rGetCnt == wGetMax) ) nxt_state = P3; else nxt_state = P2;
 		end
 
 		P3: begin
@@ -158,8 +142,7 @@ always @(*) begin
 			if((rGetCnt == wGetMax)) nxt_state = P7; else nxt_state = P6;
 		end
 		P7: begin
-			if(rColCnt == WIDTH -1) nxt_state = P8;
-			else nxt_state = P7;
+			if(rColCnt == WIDTH -1) nxt_state = P8; else nxt_state = P7;
 		end
 		P8: begin
 			if((rGetCnt == wGetMax)) nxt_state = IDLE; else nxt_state = P8;
@@ -168,11 +151,11 @@ always @(*) begin
 	endcase
 end
 
-// 주소 계산 로직 (rAddr)
 reg [ADDR_W -1:0] rAddr;
+
 always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
-		rAddr <= {ADDR_W{1'b0}};
+		rAddr <= {ADDR_W{1'b0}};	
 	end
 	else begin
 		if(iEn == 1'b1 && iBusy == 1'b0) begin
@@ -193,7 +176,7 @@ always @(posedge iClk or negedge iRst) begin
 				end
 
 				P3 : begin
-					if(rGetCnt == 0) rAddr <= wPixelCnt - WIDTH;
+					if(rGetCnt == 0) rAddr <= wPixelCnt - WIDTH - 1'b1;
 					else if(rGetCnt == 2) rAddr <= rAddr + WIDTH-1'b1;
 					else if(rGetCnt == 4) rAddr <= rAddr + WIDTH-1'b1;
 					else if(rGetCnt <= 5) rAddr <= rAddr + 1'b1;
@@ -216,7 +199,7 @@ always @(posedge iClk or negedge iRst) begin
 					else rAddr <= rAddr;
 				end
 				P7 : begin
-					if(rGetCnt == 0) rAddr <= wPixelCnt + 1'b1 - WIDTH;
+					if(rGetCnt == 0) rAddr <= wPixelCnt - WIDTH + 1'b1;
 					else if(rGetCnt == 1) rAddr <= rAddr+WIDTH;
 					else rAddr <= rAddr;
 				end
@@ -232,6 +215,7 @@ end
 
 assign oAddr = rAddr;
 assign oCs = !((cur_state == P2) || (cur_state == P5) || (cur_state == P8)) && iEn;
+
 //////////////////
 /*register block*/
 /////////////////
@@ -241,7 +225,7 @@ reg [DATA_W - 1:0] rOut[0:8];//shift register
 always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
 		for(i = 0; i < 3; i = i + 1)begin
-			rOut[i] <= {DATA_W{1'b0}};
+			rOut[i] <= {DATA_W{1'b0}};			
 		end
 	end
 	else if(iEn == 1'b1 && iBusy == 1'b0)begin
@@ -268,7 +252,7 @@ always @(posedge iClk or negedge iRst) begin
 				end
 				if(rGetCnt == 2)begin
 					for(i = 0; i < 2; i = i + 1)begin
-						rOut[i] <= {DATA_W{1'b0}};
+						rOut[i] <= {DATA_W{1'b0}};			
 					end
 				end
 			end
@@ -295,20 +279,20 @@ always @(posedge iClk or negedge iRst) begin
 				end
 				if(rGetCnt == 2)begin
 					for(i = 0; i < 2; i = i + 1)begin
-						rOut[i] <= {DATA_W{1'b0}};
+						rOut[i] <= {DATA_W{1'b0}};			
 					end
 				end
 			end
 			default: begin
 				for(i = 0; i < 3; i = i + 1)begin
-					rOut[i] <= rOut[i];
+					rOut[i] <= rOut[i];	
 				end
 			end
 		endcase
 	end
 	else begin
 		for(i = 0; i < 3; i = i + 1)begin
-			rOut[i] <= rOut[i];
+			rOut[i] <= rOut[i];	
 		end
 	end
 end
@@ -317,7 +301,7 @@ end
 always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
 		for(i = 3; i < 6; i = i + 1)begin
-			rOut[i] <= {DATA_W{1'b0}};
+			rOut[i] <= {DATA_W{1'b0}};			
 		end
 	end
 	else if(iEn == 1'b1 && iBusy == 1'b0)begin
@@ -344,7 +328,7 @@ always @(posedge iClk or negedge iRst) begin
 				end
 				if(rGetCnt == 2)begin
 					for(i = 3; i < 6; i = i + 1)begin
-						rOut[i] <= {DATA_W{1'b0}};
+						rOut[i] <= {DATA_W{1'b0}};			
 					end
 				end
 			end
@@ -371,7 +355,7 @@ always @(posedge iClk or negedge iRst) begin
 				end
 				if(rGetCnt == 2)begin
 					for(i = 3; i < 6; i = i + 1)begin
-						rOut[i] <= {DATA_W{1'b0}};
+						rOut[i] <= {DATA_W{1'b0}};			
 					end
 				end
 			end
@@ -398,21 +382,21 @@ always @(posedge iClk or negedge iRst) begin
 				end
 				if(rGetCnt == 2)begin
 					for(i = 3; i < 6; i = i + 1)begin
-						rOut[i] <= {DATA_W{1'b0}};
+						rOut[i] <= {DATA_W{1'b0}};			
 					end
 				end
 			end
 
 			default: begin
 				for(i = 3; i < 6; i = i + 1)begin
-					rOut[i] <= rOut[i];
+					rOut[i] <= rOut[i];	
 				end
 			end
 		endcase
 	end
 	else begin
 		for(i = 3; i < 6; i = i + 1)begin
-			rOut[i] <= rOut[i];
+			rOut[i] <= rOut[i];	
 		end
 	end
 end
@@ -421,7 +405,7 @@ end
 always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
 		for(i = 6; i < 9; i = i + 1)begin
-			rOut[i] <= {DATA_W{1'b0}};
+			rOut[i] <= {DATA_W{1'b0}};			
 		end
 	end
 	else if(iEn == 1'b1 && iBusy == 1'b0)begin
@@ -448,7 +432,7 @@ always @(posedge iClk or negedge iRst) begin
 				end
 				if(rGetCnt == 2)begin
 					for(i = 6; i < 9; i = i + 1)begin
-						rOut[i] <= {DATA_W{1'b0}};
+						rOut[i] <= {DATA_W{1'b0}};			
 					end
 				end
 			end
@@ -475,14 +459,14 @@ always @(posedge iClk or negedge iRst) begin
 				end
 				if(rGetCnt == 2)begin
 					for(i = 6; i < 9; i = i + 1)begin
-						rOut[i] <= {DATA_W{1'b0}};
+						rOut[i] <= {DATA_W{1'b0}};			
 					end
 				end
 			end
 
 			default: begin
 				for(i = 6; i < 9; i = i + 1)begin
-					rOut[i] <= rOut[i];
+					rOut[i] <= rOut[i];	
 				end
 			end
 		endcase
@@ -494,9 +478,6 @@ always @(posedge iClk or negedge iRst) begin
 	end
 end
 
-//
-// [!!! 481픽셀 버그 수정됨 !!!]
-//
 reg wValid;
 always @(*) begin
 	case (cur_state)
@@ -504,25 +485,19 @@ always @(*) begin
 			if(rGetCnt == 2) wValid = 1'b1; else wValid = 1'b0;
 		end
 		P2: begin
-            // [수정됨] "|| rGetCnt == 1" 삭제
-			if(rGetCnt == 0) wValid = 1'b1;
-			else wValid = 1'b0;
+			if(rGetCnt == 0 || rGetCnt == 1) wValid = 1'b1; else wValid = 1'b0;
 		end
 		P4: begin
 			if(rGetCnt == 2) wValid = 1'b1; else wValid = 1'b0;
 		end
 		P5: begin
-            // [수정됨] "|| rGetCnt == 1" 삭제
-			if(rGetCnt == 0) wValid = 1'b1;
-			else wValid = 1'b0;
+			if(rGetCnt == 0 || rGetCnt == 1) wValid = 1'b1; else wValid = 1'b0;
 		end
 		P7: begin
 			if(rGetCnt == 2) wValid = 1'b1; else wValid = 1'b0;
 		end
 		P8:begin
-            // [수정됨] "|| rGetCnt == 1" 삭제
-			if(rGetCnt == 0) wValid = 1'b1;
-			else wValid = 1'b0;
+			if(rGetCnt == 0 || rGetCnt == 1) wValid = 1'b1; else wValid = 1'b0;
 		end
 		default: wValid = 1'b0;
 	endcase
