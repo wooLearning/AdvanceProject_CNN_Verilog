@@ -2,7 +2,7 @@
 
 module RGB888ToRGB565#(
     localparam MEM_DEPTH    = 130560,
-    // log2(130560) = 16.99... -> 17 비트 필요
+    // log2(130560) = 16.99... -> 17 비트 필요s
     localparam ADDR_WIDTH   = 17, 
     localparam DATA_WIDTH   = 16 // RGB565
 
@@ -73,7 +73,7 @@ module RGB888ToRGB565#(
         if (!iRst_n) begin
             // 리셋: IDLE 상태에서 0번 주소부터 시작
             state          <= STATE_IDLE;
-            addr_cnt       <= 'd0;
+            addr_cnt       <= 0;
             done_valid_reg <= 1'b0;
         end else begin
             if (i_Clk_en == 1'b1) begin
@@ -86,7 +86,7 @@ module RGB888ToRGB565#(
                                 // 마지막 주소에 썼다면 -> DONE 상태로 천이
                                 state          <= STATE_DONE;
                                 done_valid_reg <= 1'b1; // 완료 신호 활성화
-                                addr_cnt       <= 'd0;  // (다음 리셋을 위해)
+                                addr_cnt       <= 0;  // (다음 리셋을 위해)
                             end else begin
                                 // 마지막이 아니면 -> 주소 1 증가
                                 addr_cnt <= addr_cnt + 1;
@@ -97,14 +97,25 @@ module RGB888ToRGB565#(
                     STATE_DONE: begin
                         // DONE 상태 (메모리 참)
                         // 리셋이 걸릴 때까지 이 상태를 유지
-                        state          <= STATE_DONE;
-                        done_valid_reg <= 1'b1;
+                        state          <= STATE_IDLE;
+                        done_valid_reg <= 1'b0;
                     end // case STATE_DONE
                 endcase
              end
         end
     end
-
+    reg valid_delay;
+    always @(posedge iClk or negedge iRst_n) begin
+        if (!iRst_n) begin
+            valid_delay <= 0;
+        end
+        else if(i_Clk_en)begin
+            valid_delay <= i_valid;
+        end
+        else begin
+            valid_delay <= valid_delay;
+        end
+    end
     // 최종 완료 신호 출력
     assign o_done_valid = done_valid_reg;
     assign o_addr = addr_cnt;

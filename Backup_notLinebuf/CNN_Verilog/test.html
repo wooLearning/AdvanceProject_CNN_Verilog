@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Window3x3_RGB888 FSM</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #ffffff;
+    }
+
+    svg {
+      font-family: "Helvetica", "Nanum Gothic", sans-serif;
+    }
+
+    .state-rect {
+      fill: #ffffff;
+      stroke: #000000;
+      stroke-width: 1.5;
+    }
+
+    .state-label {
+      font-size: 16px;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+
+    .edge-label {
+      font-size: 11px;
+      fill: #000000;
+    }
+
+    .arrow {
+      stroke: #000000;
+      stroke-width: 1.3;
+      fill: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- viewBox 기준 좌표: x=0~400, y=40~720 정도 -->
+  <svg width="650" height="820" viewBox="0 40 400 720">
+    <defs>
+      <marker id="arrowhead" markerWidth="8" markerHeight="6"
+              refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <polygon points="0 0, 8 3, 0 6"/>
+      </marker>
+    </defs>
+
+    <!-- ===================== 상태 노드 ===================== -->
+    <!-- 좌표: x = 200, y는 아래쪽으로 65씩 증가 -->
+    <!-- IDLE (y = 70) -->
+    <rect x="150" y="50" width="100" height="40" rx="12" ry="12" class="state-rect"/>
+    <text class="state-label" x="200" y="72">IDLE</text>
+
+    <!-- P0 (y = 135) -->
+    <rect x="150" y="115" width="100" height="40" rx="12" ry="12" class="state-rect"/>
+    <text class="state-label" x="200" y="137">P0</text>
+
+    <!-- P1 (y = 200) -->
+    <rect x="150" y="180" width="100" height="40" rx="12" ry="12" class="state-rect"/>
+    <text class="state-label" x="200" y="202">P1</text>
+
+    <!-- P2 (y = 265) -->
+    <rect x="150" y="245" width="100" height="40" rx="12" ry="12" class="state-rect"/>
+    <text class="state-label" x="200" y="267">P2</text>
+
+    <!-- P3 (y = 330) -->
+    <rect x="150" y="310" width="100" height="40" rx="12" ry="12" class="state-rect"/>
+    <text class="state-label" x="200" y="332">P3</text>
+
+    <!-- P4 (y = 395) -->
+    <rect x="150" y="375" width="100" height="40" rx="12" ry="12" class="state-rect"/>
+    <text class="state-label" x="200" y="397">P4</text>
+
+    <!-- P5 (y = 460) -->
+    <rect x="150" y="440" width="100" height="40" rx="12" ry="12" class="state-rect"/>
+    <text class="state-label" x="200" y="462">P5</text>
+
+    <!-- P6 (y = 525) -->
+    <rect x="150" y="505" width="100" height="40" rx="12" ry="12" class="state-rect"/>
+    <text class="state-label" x="200" y="527">P6</text>
+
+    <!-- P7 (y = 590) -->
+    <rect x="150" y="570" width="100" height="40" rx="12" ry="12" class="state-rect"/>
+    <text class="state-label" x="200" y="592">P7</text>
+
+    <!-- P8 (y = 655) -->
+    <rect x="150" y="635" width="100" height="40" rx="12" ry="12" class="state-rect"/>
+    <text class="state-label" x="200" y="657">P8</text>
+
+    <!-- ===================== 전이 (Edges) ===================== -->
+    <!-- 1) IDLE -> IDLE (self loop) -->
+    <path d="M 250 70 C 290 48, 290 92, 250 70"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="295" y="70">
+      not (iEn == 1'b1 &amp;&amp; iBusy == 1'b0)
+    </text>
+
+    <!-- 2) IDLE -> P0 -->
+    <line x1="200" y1="90" x2="200" y2="115"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="210" y="105">
+      iEn == 1'b1 &amp;&amp; iBusy == 1'b0
+    </text>
+
+    <!-- 3) P0 -> P0 (self loop) -->
+    <path d="M 250 135 C 290 113, 290 157, 250 135"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="295" y="135">
+      not (rGetCnt == wGetMax)
+    </text>
+
+    <!-- 4) P0 -> P1 -->
+    <line x1="200" y1="155" x2="200" y2="180"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="210" y="167">
+      rGetCnt == wGetMax
+    </text>
+
+    <!-- 5) P1 -> P1 (self loop) -->
+    <path d="M 250 200 C 290 178, 290 222, 250 200"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="295" y="200">
+      not (rColCnt == WIDTH -1)
+    </text>
+
+    <!-- 6) P1 -> P2 -->
+    <line x1="200" y1="220" x2="200" y2="245"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="210" y="232">
+      rColCnt == WIDTH -1
+    </text>
+
+    <!-- 7) P2 -> P2 (self loop) -->
+    <path d="M 250 265 C 290 243, 290 287, 250 265"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="295" y="265">
+      not (rGetCnt == wGetMax)
+    </text>
+
+    <!-- 8) P2 -> P3 -->
+    <line x1="200" y1="285" x2="200" y2="310"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="210" y="297">
+      rGetCnt == wGetMax
+    </text>
+
+    <!-- 9) P3 -> P3 (self loop) -->
+    <path d="M 250 330 C 290 308, 290 352, 250 330"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="295" y="330">
+      not (rGetCnt == wGetMax)
+    </text>
+
+    <!-- 10) P3 -> P4 -->
+    <line x1="200" y1="350" x2="200" y2="375"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="210" y="362">
+      rGetCnt == wGetMax
+    </text>
+
+    <!-- 11) P4 -> P4 (self loop) -->
+    <path d="M 250 395 C 290 373, 290 417, 250 395"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="295" y="395">
+      not (rColCnt == WIDTH - 1)
+    </text>
+
+    <!-- 12) P4 -> P5 -->
+    <line x1="200" y1="415" x2="200" y2="440"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="210" y="427">
+      rColCnt == WIDTH - 1
+    </text>
+
+    <!-- 13) P5 -> P3 (위로 점프) -->
+    <line x1="200" y1="440" x2="200" y2="350"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="210" y="395">
+      (rGetCnt == wGetMax)
+    </text>
+
+    <!-- 14) P5 -> P5 (self loop) -->
+    <path d="M 250 460 C 290 438, 290 482, 250 460"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="295" y="460">
+      not ((rRowCnt == HEIGHT-2) &amp;&amp; (rGetCnt == wGetMax))
+    </text>
+
+    <!-- 15) P5 -> P6 -->
+    <line x1="200" y1="480" x2="200" y2="505"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="210" y="492">
+      (rRowCnt == HEIGHT-2) &amp;&amp; (rGetCnt == wGetMax)
+    </text>
+
+    <!-- 16) P6 -> P6 (self loop) -->
+    <path d="M 250 525 C 290 503, 290 547, 250 525"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="295" y="525">
+      not (rGetCnt == wGetMax)
+    </text>
+
+    <!-- 17) P6 -> P7 -->
+    <line x1="200" y1="545" x2="200" y2="570"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="210" y="557">
+      rGetCnt == wGetMax
+    </text>
+
+    <!-- 18) P7 -> P7 (self loop) -->
+    <path d="M 250 590 C 290 568, 290 612, 250 590"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="295" y="590">
+      not (rColCnt == WIDTH -1)
+    </text>
+
+    <!-- 19) P7 -> P8 -->
+    <line x1="200" y1="610" x2="200" y2="635"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="210" y="622">
+      rColCnt == WIDTH -1
+    </text>
+
+    <!-- 20) P8 -> IDLE (맨 아래에서 맨 위로) -->
+    <path d="M 150 655 C 70 580, 70 140, 150 90"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="75" y="365">
+      rGetCnt == wGetMax
+    </text>
+
+    <!-- 21) P8 -> P8 (self loop) -->
+    <path d="M 250 655 C 290 633, 290 677, 250 655"
+          class="arrow" marker-end="url(#arrowhead)"/>
+    <text class="edge-label" x="295" y="655">
+      not (rGetCnt == wGetMax)
+    </text>
+
+  </svg>
+</body>
+</html>

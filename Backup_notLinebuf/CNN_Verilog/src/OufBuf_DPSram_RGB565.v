@@ -38,7 +38,7 @@ module OufBuf_DPSram_RGB565(
 // Write
     always @(posedge iClk) begin
         if(iEnClk == 1'b1 && iWrEn == 1'b1) begin
-                rOufBuf[iWrAddr] <= iData;
+            rOufBuf[iWrAddr] <= iData;
         end
     end
 
@@ -49,7 +49,7 @@ module OufBuf_DPSram_RGB565(
             oData <= 16'd0;
         end
         else if(iEnClk) begin
-                oData <= rOufBuf[iRdAddr];
+            oData <= rOufBuf[iRdAddr];
         end
     end
 

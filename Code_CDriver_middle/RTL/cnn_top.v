@@ -1,0 +1,189 @@
+module cnn_top (
+	input wire iClk,
+	input wire iRstButton,
+	input wire iStart,
+
+	output wire oLcdClk,
+    output wire oLcdHSync,
+    output wire oLcdVSync,
+    output wire oLcdDe,
+    output wire oLcdBackLight,
+    output wire [4:0] oLcdR,
+    output wire [5:0] oLcdG,
+    output wire [4:0] oLcdB,
+	output wire o_enable,
+
+	//FOR AXI
+	input [31:0] iReg0,
+	input [31:0] iReg1,
+	input [31:0] iReg2,
+	input [31:0] iReg3
+	
+);
+
+localparam DATA_W = 24;
+localparam ADDR_W = 17;
+localparam WIDTH = 480;
+localparam HEIGHT = 272;
+localparam DEPTH  = WIDTH * HEIGHT;
+
+wire wRsn;
+//wire wStart;
+wire wEnClk;
+wire [15:0] wRamRdData;
+wire [16:0] wRamRdAddr;
+wire wCs;
+wire wValid;
+wire wBusy;
+wire [ADDR_W-1:0] wAddr;
+wire [DATA_W-1:0] wPixel;
+wire [DATA_W-1:0] wOut0;
+wire [DATA_W-1:0] wOut1;
+wire [DATA_W-1:0] wOut2;
+wire [DATA_W-1:0] wOut3;
+wire [DATA_W-1:0] wOut4;
+wire [DATA_W-1:0] wOut5;
+wire [DATA_W-1:0] wOut6;
+wire [DATA_W-1:0] wOut7;
+wire [DATA_W-1:0] wOut8;
+wire [23:0] wDataRGB88;
+wire wValid1;
+wire wWrEn;
+wire [16:0] wRamWrAddr;
+wire [15:0] wRamWrData;
+
+RstGen u_RstGen(
+	.iClk(iClk),
+	.iButton(iRstButton),
+	.oRsn(wRsn)
+);
+
+/*
+SyncAndEdge u_SyncAndEdge(
+   .iClk(iClk),
+   .iRsn(wRsn),
+   .iButton(iStartButton),
+   .iEnClk(wEnClk),
+   .oSyncButton(wStart)
+);
+*/
+
+assign o_enable = wEnClk;
+
+clk_enable en1(
+    .iClk(iClk),
+	.iRst(wRsn),
+	.oEnable(wEnClk)
+);
+
+inbuf_wrapper #(
+  	.DATA_W(DATA_W),
+	.ADDR_W(ADDR_W),
+	.DEPTH(DEPTH)
+) u_InputMemory(
+  	.clka  (iClk),
+	.ena   (wCs),
+	.wea   (1'b0),//읽기모드
+	.addra (wAddr),
+	.dina  (0),//읽기모드
+	.douta (wPixel)
+);
+
+Window3x3_RGB888#(
+    .DATA_W(DATA_W),
+	.ADDR_W(ADDR_W),
+	.WIDTH(WIDTH),
+	.HEIGHT(HEIGHT),
+	.DEPTH(DEPTH)
+)u_Window3x3_RGB888(
+	.iClk(iClk),
+	.iRst(wRsn),
+	.iEn(wEnClk),
+	.iStart(iStart),
+
+	/*for bram*/
+	.oCs(wCs),
+	.oAddr(wAddr),
+	.iPixel(wPixel),
+
+	/*next block 3x3 pixel */
+	.oOut0(wOut0),
+	.oOut1(wOut1),
+	.oOut2(wOut2),
+	.oOut3(wOut3),
+	.oOut4(wOut4),
+	.oOut5(wOut5),
+	.oOut6(wOut6),
+	.oOut7(wOut7),
+	.oOut8(wOut8),
+	.oValid(wValid),
+
+	/*mac wait*/
+	.iBusy(wBusy)
+);
+
+Conv3x3_RGB888 u_Conv3x3_RGB888(
+	.iClk(iClk),
+	.iRst_n(wRsn),
+	.i_enable(wValid),
+	.i_Clk_en(wEnClk),
+	.i_p1(wOut0),
+	.i_p2(wOut1),
+	.i_p3(wOut2),
+	.i_p4(wOut3),
+	.i_p5(wOut4),
+	.i_p6(wOut5),
+	.i_p7(wOut6),
+	.i_p8(wOut7),
+	.i_p9(wOut8),
+	.o_relu_rgb(wDataRGB88),
+	.o_result_valid(wValid1),
+	.o_busy(wBusy),
+	
+	//FOR AXI
+	.i_reg0(iReg0),
+    .i_reg1(iReg1),
+    .i_reg2(iReg2),
+    .i_reg3(iReg3)
+);
+
+RGB888ToRGB565 u_RGB888ToRGB565(
+	.iClk(iClk),
+	.iRst_n(wRsn),
+	.i_data_rgb888(wDataRGB88),
+	.i_valid(wValid1),
+	.i_Clk_en(wEnClk),
+	.o_addr(wRamWrAddr),
+	.o_data(wRamWrData),
+	.o_valid(wWrEn)
+);
+
+
+OufBuf_DPSram_RGB565 u_OufBuf_DPSram_RGB565(
+	.iClk(iClk),
+	.iRsn(wRsn),
+	.iEnClk(wEnClk),
+	.iWrEn(wWrEn),
+	.iWrAddr(wRamWrAddr),
+	.iRdAddr(wRamRdAddr),
+	.iData(wRamWrData),
+	.oData(wRamRdData)
+);
+
+LcdCtrl_RGB565 u_LcdCtrl_RGB565(
+	.iClk(iClk),
+	.iRsn(wRsn),
+	.iEnClk(wEnClk),
+	.iRamRdData(wRamRdData),
+	.oRamRdAddr(wRamRdAddr),
+	.oLcdHSync(oLcdHSync),
+	.oLcdVSync(oLcdVSync),
+	.oLcdR(oLcdR),
+	.oLcdG(oLcdG),
+	.oLcdB(oLcdB)
+);
+
+assign oLcdClk = wEnClk;
+assign oLcdDe = 1'b1;
+assign oLcdBackLight = 1'b1;
+endmodule

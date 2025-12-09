@@ -56,7 +56,7 @@ module LcdCtrl_RGB565(
                 hsync <= 0;
                 h_count <= h_count + 1;
             end
-            else if((h_count >= 40) && (h_count < 522)) begin
+            else if((h_count >= 40) && (h_count < 522)) begin//??
                 hsync <= 1;
                 h_count <= h_count + 1;
             end
@@ -99,8 +99,9 @@ module LcdCtrl_RGB565(
         end
     end
 
+
 // pipeline delay
-    always @(posedge iClk or negedge iRsn) begin
+    always @(negedge iClk or negedge iRsn) begin
         if(!iRsn) begin
             hsync_delay <= 0;
             vsync_delay <= 0;
@@ -116,7 +117,7 @@ module LcdCtrl_RGB565(
     end
 
 // LCD RGB Data
-    always @(posedge iClk or negedge iRsn) begin
+    always @(negedge iClk or negedge iRsn) begin
         if(!iRsn) begin
             oLcdR <= 0;
             oLcdG <= 0;

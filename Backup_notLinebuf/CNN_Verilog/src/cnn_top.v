@@ -1,7 +1,7 @@
 module cnn_top (
 	input wire iClk,
-	input wire iRsn,
-
+	input wire iRsnButton,//button reset
+	//input wire iStart,
 
 	output wire oLcdClk,
     output wire oLcdHSync,
@@ -21,6 +21,7 @@ localparam DEPTH  = WIDTH * HEIGHT;
 
 
 wire wEnClk;
+wire wRsn;
 wire [15:0] wRamRdData;
 wire [16:0] wRamRdAddr;
 wire wCs;
@@ -44,11 +45,15 @@ wire [16:0] wRamWrAddr;
 wire [15:0] wRamWrData;
 
 
-
+RstGen RstGen(
+	.iClk(iClk),
+	.iButton(iRsnButton),
+	.oRsn(wRsn)
+);
 
 clk_enable en1(
     .iClk(iClk),
-	.iRst(iRsn),
+	.iRst(wRsn),
 	.oEnable(wEnClk)
 );
 
@@ -73,8 +78,9 @@ Window3x3_RGB888#(
 	.DEPTH(DEPTH)
 )u_Window3x3_RGB888(
 	.iClk(iClk),
-	.iRst(iRsn),
+	.iRst(wRsn),
 	.iEn(wEnClk),
+	//.iStart(iStart),
 
 	/*for bram*/
 	.oCs(wCs),
@@ -99,7 +105,7 @@ Window3x3_RGB888#(
 
 Conv3x3_RGB888 u_Conv3x3_RGB888(
 	.iClk(iClk),
-	.iRst_n(iRsn),
+	.iRst_n(wRsn),
 	.i_enable(wValid),
 	.i_Clk_en(wEnClk),
 	.i_p1(wOut0),
@@ -118,7 +124,7 @@ Conv3x3_RGB888 u_Conv3x3_RGB888(
 
 RGB888ToRGB565 u_RGB888ToRGB565(
 	.iClk(iClk),
-	.iRst_n(iRsn),
+	.iRst_n(wRsn),
 	.i_data_rgb888(wDataRGB88),
 	.i_valid(wValid1),
 	.i_Clk_en(wEnClk),
@@ -127,9 +133,10 @@ RGB888ToRGB565 u_RGB888ToRGB565(
 	.o_valid(wWrEn)
 );
 
+
 OufBuf_DPSram_RGB565 u_OufBuf_DPSram_RGB565(
 	.iClk(iClk),
-	.iRsn(iRsn),
+	.iRsn(wRsn),
 	.iEnClk(wEnClk),
 	.iWrEn(wWrEn),
 	.iWrAddr(wRamWrAddr),
@@ -140,7 +147,7 @@ OufBuf_DPSram_RGB565 u_OufBuf_DPSram_RGB565(
 
 LcdCtrl_RGB565 u_LcdCtrl_RGB565(
 	.iClk(iClk),
-	.iRsn(iRsn),
+	.iRsn(wRsn),
 	.iEnClk(wEnClk),
 	.iRamRdData(wRamRdData),
 	.oRamRdAddr(wRamRdAddr),
