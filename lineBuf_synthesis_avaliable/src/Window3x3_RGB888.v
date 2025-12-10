@@ -29,16 +29,16 @@ module Window3x3_RGB888#(
 );
 
 //fsm
-localparam IDLE = 4'd0;
-localparam FIRST_ROW_FILL = 4'd1;
-localparam FIRST_ROW_FILL_END = 4'd2;
-localparam FIRST_ROW = 4'd3;
-localparam FIRST_ROW_END = 4'd4;
-localparam MIDDLE_ROW = 4'd5;
-localparam MIDDLE_ROW_END = 4'd6;
-localparam LAST_ROW = 4'd7;
-reg [3:0] cur_state;
-reg [3:0] nxt_state;
+localparam IDLE = 3'd0;
+localparam FIRST_ROW_FILL = 3'd1;
+localparam FIRST_ROW_FILL_END = 3'd2;
+localparam FIRST_ROW = 3'd3;
+localparam ROW_END = 3'd4;
+localparam MIDDLE_ROW = 3'd5;
+localparam LAST_ROW = 3'd6;
+
+reg [2:0] cur_state;
+reg [2:0] nxt_state;
 
 //reg
 reg [ADDR_W-1:0] rAddr;
@@ -60,7 +60,9 @@ wire wColEnd;
 wire wRowEnd;
 wire wOValid = (cur_state != FIRST_ROW_FILL) && (cur_state != FIRST_ROW_FILL_END)
 			&&(cur_state != IDLE) ? 1 : 0;
+wire wPixShiftDone;
 
+integer i;
 
 //part1
 always @(posedge iClk or negedge iRst) begin
@@ -85,25 +87,24 @@ always @(*) begin
 			if(rAddr_d2 == WIDTH - 1) nxt_state = FIRST_ROW_FILL_END; else nxt_state = FIRST_ROW_FILL;
 		end
 		FIRST_ROW_FILL_END : begin
-			if(rPixCnt == 1) nxt_state = FIRST_ROW; else nxt_state = FIRST_ROW_FILL_END;
+			if(wPixShiftDone) nxt_state = FIRST_ROW; else nxt_state = FIRST_ROW_FILL_END;
 		end
 		FIRST_ROW: begin
-			if(wColEnd) nxt_state = FIRST_ROW_END; else nxt_state = FIRST_ROW;
+			if(wColEnd) nxt_state = ROW_END; else nxt_state = FIRST_ROW;
 		end
-		FIRST_ROW_END: begin
-			if(rPixCnt == 1) nxt_state = MIDDLE_ROW; else nxt_state = FIRST_ROW_END;
-		end
-		MIDDLE_ROW : begin
-			if(wColEnd) nxt_state = MIDDLE_ROW_END; else nxt_state = MIDDLE_ROW;
-		end
-		MIDDLE_ROW_END : begin
-			if(rPixCnt == 1) begin
-				nxt_state = MIDDLE_ROW;
-				if(rRowCnt == HEIGHT -1)begin
+		ROW_END: begin
+			if(wPixShiftDone) begin
+				if(wRowEnd)begin
 					nxt_state =LAST_ROW;
 				end 
+				else begin
+					nxt_state = MIDDLE_ROW;
+				end
 			end
-			else nxt_state = MIDDLE_ROW_END;
+			else nxt_state = ROW_END;
+		end
+		MIDDLE_ROW : begin
+			if(wColEnd) nxt_state = ROW_END; else nxt_state = MIDDLE_ROW;
 		end
 		LAST_ROW: begin
 			if(wColEnd) nxt_state = IDLE; else nxt_state = LAST_ROW;
@@ -111,8 +112,6 @@ always @(*) begin
 		default:nxt_state = IDLE; 
 	endcase
 end
-
-integer i;
 
 //rAddr Counter
 always @(posedge iClk or negedge iRst) begin
@@ -210,7 +209,7 @@ always @(posedge iClk or negedge iRst) begin
 				rLineBuf1[rAddr_d2] <= iPixel;
 			end 
 			FIRST_ROW_FILL_END: begin
-				if(rPixCnt == 1) begin
+				if(wPixShiftDone) begin
 					rPixCnt <= 0;
 				end
 				else begin
@@ -221,9 +220,8 @@ always @(posedge iClk or negedge iRst) begin
 					rPix[i-1] <= rPix[i];
 				end
 			end
-			FIRST_ROW_END, 
 			MIDDLE_ROW_END :begin
-				if(rPixCnt == 1) begin
+				if(wPixShiftDone) begin
 					rPixCnt <= 0;
 				end
 				else begin
@@ -277,5 +275,8 @@ assign oValid = wOValid;
 //For Bram
 assign oCs = iEn && !((cur_state == IDLE)) && !((cur_state == LAST_ROW));
 assign oAddr = rAddr;
+
+//pix shift register 2 shift signal
+assign wPixShiftDone = (rPixCnt == 1);
 
 endmodule
