@@ -32,6 +32,7 @@ wire wEnClk;
 wire [15:0] wRamRdData;
 wire [16:0] wRamRdAddr;
 
+wire [23:0] wPixel;
 wire wValid;
 wire [ADDR_W-1:0] wAddr;
 wire [DATA_W-1:0] wOut0;

@@ -40,12 +40,12 @@ wire    [16:0]    cam_wr_addr_w;
 
 /*inbuf read addr data*/
 wire     wCs;
-wire    [15:0]    inbuf_rd_data_w;
+wire    [23:0]    inbuf_rd_data_w;
 wire    [16:0]    inbuf_rd_addr_w;
 
 wire wRsn;
 RstGen u_RstGen(
-	.iClk(iClk),
+	.iClk(PL_CLK_100MHZ),
 	.iButton(RstButton),
 	.oRsn(wRsn)
 );
