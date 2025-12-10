@@ -27,7 +27,7 @@ localparam WIDTH = 480;
 localparam HEIGHT = 272;
 localparam DEPTH  = WIDTH * HEIGHT;
 
-wire wRsn;
+
 wire wEnClk;
 wire [15:0] wRamRdData;
 wire [16:0] wRamRdAddr;
@@ -54,15 +54,10 @@ assign inbuf_rd_addr_w = wAddr;
 assign wPixel = {{inbuf_rd_data_w[4:0], inbuf_rd_data_w[4:2]},  // Red: 5bit + 상위 3bit = 8bit
                          {inbuf_rd_data_w[10:5], inbuf_rd_data_w[10:9]},  // Green: 6bit + 상위 2bit = 8bit
                          {inbuf_rd_data_w[15:11], inbuf_rd_data_w[15:13]}};
-RstGen u_RstGen(
-	.iClk(iClk),
-	.iButton(iRstButton),
-	.oRsn(wRsn)
-);
 
 clk_enable en1(
     .iClk(iClk),
-	.iRst(wRsn),
+	.iRst(iRstButton),
 	.oEnable(wEnClk)
 );
 
@@ -74,7 +69,7 @@ Window3x3_RGB888#(
 	.DEPTH(DEPTH)
 )u_Window3x3_RGB888(
 	.iClk(iClk),
-	.iRst(wRsn),
+	.iRst(iRstButton),
 	.iEn(wEnClk),
 
 	/*for inbuf Control*/
@@ -97,7 +92,7 @@ Window3x3_RGB888#(
 
 Conv3x3_RGB888 u_Conv3x3_RGB888(
 	.iClk(iClk),
-	.iRst_n(wRsn),
+	.iRst_n(iRstButton),
 	.i_enable(wValid),
 	.i_Clk_en(wEnClk),
 	.i_p1(wOut0),
@@ -119,7 +114,7 @@ Conv3x3_RGB888 u_Conv3x3_RGB888(
 
 RGB888ToRGB565 u_RGB888ToRGB565(
 	.iClk(iClk),
-	.iRst_n(wRsn),
+	.iRst_n(iRstButton),
 	.i_data_rgb888(wDataRGB88),
 	.i_valid(wValid1),
 	.i_Clk_en(wEnClk),
@@ -131,7 +126,7 @@ RGB888ToRGB565 u_RGB888ToRGB565(
 
 OufBuf_DPSram_RGB565 u_OufBuf_DPSram_RGB565(
 	.iClk(iClk),
-	.iRsn(wRsn),
+	.iRsn(iRstButton),
 	.iEnClk(wEnClk),
 	.iWrEn(wWrEn),
 	.iWrAddr(wRamWrAddr),
@@ -142,7 +137,7 @@ OufBuf_DPSram_RGB565 u_OufBuf_DPSram_RGB565(
 
 LcdCtrl_RGB565 u_LcdCtrl_RGB565(
 	.iClk(iClk),
-	.iRsn(wRsn),
+	.iRsn(iRstButton),
 	.iEnClk(wEnClk),
 	.iRamRdData(wRamRdData),
 	.oRamRdAddr(wRamRdAddr),
@@ -154,9 +149,3 @@ LcdCtrl_RGB565 u_LcdCtrl_RGB565(
 );
 
 endmodule
-
-
-
-
-
-

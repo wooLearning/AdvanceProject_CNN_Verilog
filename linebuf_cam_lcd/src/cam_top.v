@@ -43,15 +43,21 @@ wire     wCs;
 wire    [15:0]    inbuf_rd_data_w;
 wire    [16:0]    inbuf_rd_addr_w;
 
+wire wRsn;
+RstGen u_RstGen(
+	.iClk(iClk),
+	.iButton(RstButton),
+	.oRsn(wRsn)
+);
 
-clk_gen2    CLK_GEN_MAIN(
+clk_gen    CLK_GEN_MAIN(
     .clk_i(PL_CLK_100MHZ),
-    .count_i(16'h0001),
+    .count_i(3'b001),
     .clk_o(CAMERA_MCLK)
 );//25MHz
-clk_gen2    CLK_GEN_TFTLCD(
+clk_gen    CLK_GEN_TFTLCD(
     .clk_i(CAMERA_MCLK),
-    .count_i(16'h0001),
+    .count_i(3'b001),
     .clk_o(TFT_DCLK)
 );
 
@@ -70,7 +76,7 @@ camera_to_ram CAMEARA_TO_RAM(
 in_buf_ctrl in_buf_ctrl(
     .i_clk(PL_CLK_100MHZ),
     //input wire                i_en_clk,
-    .i_rst_n(RstButton),
+    .i_rst_n(wRsn),
 
     // [1] Camera Interface (Write Side)
     .i_cam_vsync(CAMERA_VSYNC),   // Bank Switching Trigger
@@ -86,7 +92,7 @@ in_buf_ctrl in_buf_ctrl(
 
 cnn_top u_cnn_top(
     .iClk(PL_CLK_100MHZ),
-    .iRstButton(RstButton),
+    .iRstButton(wRsn),
 
     //window -> inbuf ctrl
     .oCs(wCs),

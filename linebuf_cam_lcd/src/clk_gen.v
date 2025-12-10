@@ -1,13 +1,13 @@
 `timescale 1ns / 10ps
 
 
-module clk_gen2(
+module clk_gen(
     input   clk_i,
-    input   [15:0]  count_i,
+    input   [2:0]  count_i,
     output  clk_o
     );
     
-    reg     [15:0]  sig_count;
+    reg     [2:0]  sig_count;
     reg             sig_clk_out;
     
     always @(posedge clk_i) begin
