@@ -7,7 +7,8 @@ module Window3x3_RGB888#(
 )(
 	input iClk,
 	input iRst,
-	input iEn,
+	//input iEn,
+	input iStart,
 
 	/*for bram*/
 	output oCs,
@@ -55,6 +56,9 @@ reg [DATA_W-1:0] rLineBuf1 [0:WIDTH-1];
 reg [DATA_W-1:0] rPix[0:3];
 reg [1:0] rPixCnt;
 
+//CDC Control reg
+reg rStart1, rStart2;
+
 //wire
 wire wColEnd;
 wire wRowEnd;
@@ -64,16 +68,20 @@ wire wPixShiftDone;
 
 integer i;
 
+//CDC RX domain
+always @(posedge iClk) begin
+	rStart1 <= iStart;
+	rStart2 <= rStart1;
+end
+//assign start_pulse_100m = (rStart1[0] && !rStart1[1]); posedge detect
+
 //part1
 always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
 		cur_state <= IDLE;
 	end
-	else if(iEn == 1'b1)begin
-		cur_state <= nxt_state;
-	end
 	else begin
-		cur_state <= cur_state;
+		cur_state <= nxt_state;
 	end
 end
 
@@ -81,7 +89,7 @@ end
 always @(*) begin
 	case (cur_state)
 		IDLE: begin
-			if(iEn == 1'b1) nxt_state = FIRST_ROW_FILL; else nxt_state = IDLE;
+			if(rStart2 == 1'b1) nxt_state = FIRST_ROW_FILL; else nxt_state = IDLE;
 		end 
 		FIRST_ROW_FILL : begin
 			if(rAddr_d2 == WIDTH - 1) nxt_state = FIRST_ROW_FILL_END; else nxt_state = FIRST_ROW_FILL;
@@ -118,7 +126,7 @@ always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
 		rAddr <= 0;
 	end
-	else if(iEn == 1'b1)begin
+	else begin
 		if(rAddr == (WIDTH*HEIGHT - 1)) begin
 			rAddr <= 0;
 		end
@@ -128,9 +136,6 @@ always @(posedge iClk or negedge iRst) begin
 		else begin
 			rAddr <= rAddr + 1'b1;
 		end
-	end
-	else begin
-		rAddr <= rAddr;
 	end
 end
 
@@ -144,7 +149,7 @@ always @(posedge iClk or negedge iRst) begin
 		rAddr_d1 <= 0;
 		rAddr_d2 <= 0;
 	end
-	else if(iEn == 1'b1) begin
+	else begin
 		rAddr_d1 <= rAddr;
 		rAddr_d2 <= rAddr_d1;
 	end
@@ -155,7 +160,7 @@ always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
 		rColCnt <= 0;
 	end 
-	else if (wOValid && iEn == 1'b1) begin
+	else if (wOValid) begin
 		if (wColEnd) begin
 			rColCnt <= 0;
 		end
@@ -171,7 +176,7 @@ always @(posedge iClk or negedge iRst) begin
 		rColCnt_d0 <= 0;
 		rColCnt_d1 <= 0;
 	end 
-	else if (iEn == 1'b1) begin
+	else begin
 		rColCnt_d0 <= rColCnt;
 		rColCnt_d1 <= rColCnt_d0;
 	end
@@ -182,7 +187,7 @@ always @(posedge iClk or negedge iRst) begin
 	if(!iRst) begin
 		rRowCnt <= 0;
 	end 
-	else if (wOValid && iEn == 1'b1) begin
+	else if (wOValid) begin
 		if (rRowCnt == HEIGHT) begin
 			rRowCnt <= 0;
 		end
@@ -199,7 +204,7 @@ always @(posedge iClk or negedge iRst) begin
 			rPix[i] <= 0;
 		end
 	end
-	else if(iEn == 1'b1) begin
+	else begin
 
 		case (cur_state)
 			IDLE : begin
@@ -273,7 +278,7 @@ assign wRowEnd = (rRowCnt == HEIGHT-1);
 assign oValid = wOValid;
 
 //For Bram
-assign oCs = iEn && !((cur_state == IDLE)) && !((cur_state == LAST_ROW));
+assign oCs = !((cur_state == IDLE)) && !((cur_state == LAST_ROW));//iClk
 assign oAddr = rAddr;
 
 //pix shift register 2 shift signal
